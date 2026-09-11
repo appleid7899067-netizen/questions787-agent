@@ -4,22 +4,18 @@ import Script from "next/script";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function PuterAuth() {
-  const [ready, setReady] = useState(false);
-
-  return (
-    <>
-      <Script
-        src="https://js.puter.com/v2/"
-        strategy="afterInteractive"
-        onLoad={() => setReady(true)}
-      />
-      <PuterLoginButton ready={ready} />
-    </>
-  );
+declare global {
+  interface Window {
+    puter?: {
+      auth?: {
+        signIn?: () => Promise<unknown>;
+      };
+    };
+  }
 }
 
-function PuterLoginButton({ ready }: { readonly ready: boolean }) {
+export function PuterAuth() {
+  const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [error, setError] = useState<string>();
@@ -40,21 +36,23 @@ function PuterLoginButton({ ready }: { readonly ready: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <Button disabled={!ready || pending || signedIn} onClick={signIn} type="button" variant="outline">
-        {signedIn ? "Puter connected" : pending ? "Signing in to Puter…" : "Continue with Puter"}
-      </Button>
-      {error ? <p className="text-destructive text-sm" role="alert">{error}</p> : null}
-    </div>
+    <>
+      <Script
+        src="https://js.puter.com/v2/"
+        strategy="afterInteractive"
+        onLoad={() => setReady(true)}
+      />
+      <div className="fixed top-3 right-4 z-50 flex flex-col items-end gap-2">
+        <Button
+          disabled={!ready || pending || signedIn}
+          onClick={signIn}
+          type="button"
+          variant="outline"
+        >
+          {signedIn ? "Puter connected" : pending ? "Signing in to Puter…" : "Login with Puter"}
+        </Button>
+        {error ? <p className="rounded-md bg-background px-2 py-1 text-destructive text-xs shadow" role="alert">{error}</p> : null}
+      </div>
+    </>
   );
-}
-
-declare global {
-  interface Window {
-    puter?: {
-      auth?: {
-        signIn?: () => Promise<unknown>;
-      };
-    };
-  }
 }
