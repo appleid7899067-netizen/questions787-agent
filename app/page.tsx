@@ -1,5 +1,5 @@
-import { PuterChat } from "./_components/puter-chat";
+import { AuthenticatedAgentChat } from "./_components/authenticated-agent-chat";
 
 export default function Page() {
-  return <PuterChat />;
+  return <AuthenticatedAgentChat />;
 }
