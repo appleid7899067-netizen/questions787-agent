@@ -11,12 +11,18 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
+import { getPuterAuthToken } from "./puter-auth";
 
 const AGENT_NAME = "SlieLoBoss";
 
 export function AgentChat({ sessionId, sessionless = false }: { readonly sessionId?: string; readonly sessionless?: boolean }) {
   const [cancellationError, setCancellationError] = useState<string>(); const [hasInputText, setHasInputText] = useState(false);
-  const agent = useEveAgent({ initialSession: sessionId === undefined ? undefined : { sessionId, streamIndex: 0 }, resume: sessionId !== undefined, onSessionChange(session) { if (sessionId === undefined && session !== undefined) History.prototype.replaceState.call(window.history, window.history.state, "", `/s/${encodeURIComponent(session.sessionId)}`); } });
+  const agent = useEveAgent({
+    initialSession: sessionId === undefined ? undefined : { sessionId, streamIndex: 0 },
+    resume: sessionId !== undefined,
+    auth: { bearer: async () => getPuterAuthToken() ?? "" },
+    onSessionChange(session) { if (sessionId === undefined && session !== undefined) History.prototype.replaceState.call(window.history, window.history.state, "", `/s/${encodeURIComponent(session.sessionId)}`); },
+  });
   const isBusy = agent.status === "submitted" || agent.status === "streaming"; const isResuming = agent.status === "resuming"; const isEmpty = agent.data.messages.length === 0; const lastMessage = agent.data.messages.at(-1); const isPendingAssistantShell = lastMessage?.role === "assistant" && lastMessage.parts.every((part) => part.type === "step-start"); const showPendingThinking = isBusy && (agent.status === "submitted" || lastMessage?.role !== "assistant" || isPendingAssistantShell); const turnFailure = isBusy || isResuming ? undefined : getLatestTurnFailure(agent.events); const errorMessage = cancellationError ?? agent.error?.message ?? turnFailure; const hasConversationContent = sessionless || !isEmpty || errorMessage !== undefined; const showConversationLayout = isResuming || hasConversationContent; const activeSessionId = sessionId ?? agent.session?.sessionId;
   const requestCancellation = () => { setCancellationError(undefined); void agent.cancel().catch((error: unknown) => setCancellationError(toErrorMessage(error))); };
   const handleSubmit = async (message: PromptInputMessage) => { const text = message.text.trim(); if ((text.length === 0 && message.files.length === 0) || isResuming) return; setHasInputText(false); setCancellationError(undefined); const options = isBusy ? { turnPolicy: "steer" as const } : undefined; if (message.files.length === 0) { await agent.send(text, options); return; } const parts: UserContent = []; if (text.length > 0) parts.push({ text, type: "text" }); for (const file of message.files) parts.push({ data: file.url, filename: file.filename, mediaType: file.mediaType, type: "file" }); await agent.send(parts, options); };
